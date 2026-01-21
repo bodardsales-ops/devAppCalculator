@@ -1,16 +1,919 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Copier Cost Comparison Calculator</title>
-    <meta property="og:image" content="https://bolt.new/static/og_default.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://bolt.new/static/og_default.png" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur ROI Copieurs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 80rem;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .header-subtitle {
+            font-size: 1.125rem;
+            color: #4b5563;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .controls h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.5rem;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-pdf {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .btn-pdf:hover:not(:disabled) {
+            background-color: #1d4ed8;
+        }
+
+        .btn-pdf:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .copiers-list {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .copier-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #ef4444;
+        }
+
+        .copier-card.saving {
+            border-left-color: #22c55e;
+        }
+
+        .copier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .copier-name-input {
+            flex: 1;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border: none;
+            border-bottom: 1px solid #d1d5db;
+            padding: 0.5rem;
+            background: transparent;
+        }
+
+        .copier-name-input:focus {
+            outline: none;
+            border-bottom-color: #2563eb;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .form-group input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            ring: 2px;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .form-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .form-section h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.75rem;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .section-label {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+        }
+
+        .section-label.green {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .section-label.blue {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .usage-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            background-color: #eff6ff;
+            border: 2px solid #bfdbfe;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .comparison-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .comparison-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .comparison-box-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .comparison-line {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .comparison-line.total {
+            font-weight: 700;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            background-color: #f3f4f6;
+        }
+
+        .summary {
+            background: linear-gradient(to right, #eff6ff, #e0e7ff);
+            border: 2px solid #bfdbfe;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .summary-header h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-card.highlight {
+            border: 2px solid #22c55e;
+        }
+
+        .summary-card-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+        }
+
+        .summary-card-sublabel {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
+        .summary-card-value.green {
+            color: #16a34a;
+        }
+
+        .summary-card-value.red {
+            color: #dc2626;
+        }
+
+        .summary-table {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .summary-table h3 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        table thead {
+            border-bottom: 1px solid #d1d5db;
+        }
+
+        table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        table th:not(:first-child) {
+            text-align: right;
+        }
+
+        table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        table tbody tr.total {
+            background-color: #eff6ff;
+            font-weight: 700;
+        }
+
+        table td.red {
+            color: #dc2626;
+        }
+
+        table td.green {
+            color: #16a34a;
+        }
+
+        table td:not(:first-child) {
+            text-align: right;
+        }
+
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-title h1 {
+                font-size: 1.875rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls h2 {
+                min-width: 100%;
+            }
+
+            .summary-header {
+                flex-direction: column;
+            }
+
+            .summary-header h2 {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>Calculateur ROI Copieurs</h1>
+            </div>
+            <p class="header-subtitle">Comparez vos solutions et découvrez vos économies potentielles</p>
+        </div>
+
+        <div class="controls">
+            <h2>Gérer vos copieurs</h2>
+            <button class="btn btn-primary" onclick="addCopier()">+ Ajouter un copieur</button>
+        </div>
+
+        <div id="copiersList" class="copiers-list"></div>
+
+        <div id="summary" class="summary" style="display: none;">
+            <div class="summary-header">
+                <h2>Résumé Global</h2>
+                <button class="btn btn-pdf" onclick="exportPDF()">📄 Exporter en PDF</button>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-card-label">Coût Mensuel Actuel</div>
+                    <div class="summary-card-value red" id="totalCurrentMonthly">0.00 €</div>
+                    <div class="summary-card-sublabel" id="copierCount">0 copieur</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-card-label">Coût Mensuel Proposé</div>
+                    <div class="summary-card-value green" id="totalProposedMonthly">0.00 €</div>
+                    <div class="summary-card-sublabel">Total</div>
+                </div>
+
+                <div class="summary-card highlight">
+                    <div class="summary-card-label">Économies Mensuelles</div>
+                    <div class="summary-card-value green" id="monthlySavings">0.00 €</div>
+                    <div class="summary-card-sublabel" id="savingsPercent">0% de réduction</div>
+                </div>
+
+                <div class="summary-card highlight">
+                    <div class="summary-card-label">Économies Annuelles</div>
+                    <div class="summary-card-value green" id="annualSavings">0.00 €</div>
+                    <div class="summary-card-sublabel">Sur 12 mois</div>
+                </div>
+            </div>
+
+            <div class="summary-table" id="detailTableContainer" style="display: none;">
+                <h3>Détail par Copieur</h3>
+                <table id="detailTable">
+                    <thead>
+                        <tr>
+                            <th>Copieur</th>
+                            <th>Actuel/mois</th>
+                            <th>Proposé/mois</th>
+                            <th>Économies</th>
+                            <th>%</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Tous les montants sont calculés en euros (€). Les économies sont basées sur l'utilisation mensuelle réelle comparée aux forfaits disponibles.</p>
+        </div>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+
+        let copiers = [
+            {
+                id: '1',
+                name: 'Copieur Principal',
+                current: {
+                    rent: 100,
+                    packageBW: 500,
+                    packageColor: 200,
+                    packageFixedCost: 50,
+                    costPerExtraBW: 0.01,
+                    costPerExtraColor: 0.05
+                },
+                proposed: {
+                    rent: 80,
+                    packageBW: 600,
+                    packageColor: 300,
+                    packageFixedCost: 40,
+                    costPerExtraBW: 0.008,
+                    costPerExtraColor: 0.045
+                },
+                bwCopies: 1000,
+                colorCopies: 500
+            }
+        ];
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(value);
+        }
+
+        function calculateCosts(solution, bwCopies, colorCopies) {
+            const extraBW = Math.max(0, bwCopies - solution.packageBW);
+            const extraColor = Math.max(0, colorCopies - solution.packageColor);
+
+            const extraBWCost = extraBW * solution.costPerExtraBW;
+            const extraColorCost = extraColor * solution.costPerExtraColor;
+            const basePackageCost = solution.packageFixedCost;
+            const rentCost = solution.rent;
+
+            const monthlyTotal = rentCost + basePackageCost + extraBWCost + extraColorCost;
+            const annualTotal = monthlyTotal * 12;
+
+            return {
+                monthlyTotal,
+                annualTotal,
+                basePackageCost,
+                extraBWCost,
+                extraColorCost,
+                rentCost
+            };
+        }
+
+        function compareResults(copier) {
+            const current = calculateCosts(copier.current, copier.bwCopies, copier.colorCopies);
+            const proposed = calculateCosts(copier.proposed, copier.bwCopies, copier.colorCopies);
+
+            const monthlySavings = current.monthlyTotal - proposed.monthlyTotal;
+            const annualSavings = current.annualTotal - proposed.annualTotal;
+            const savingsPercentage = current.monthlyTotal > 0
+                ? (monthlySavings / current.monthlyTotal) * 100
+                : 0;
+
+            return {
+                current,
+                proposed,
+                monthlySavings,
+                annualSavings,
+                savingsPercentage
+            };
+        }
+
+        function addCopier() {
+            const newId = (Math.max(...copiers.map(c => parseInt(c.id))) + 1).toString();
+            copiers.push({
+                id: newId,
+                name: `Copieur ${newId}`,
+                current: {
+                    rent: 100,
+                    packageBW: 500,
+                    packageColor: 200,
+                    packageFixedCost: 50,
+                    costPerExtraBW: 0.01,
+                    costPerExtraColor: 0.05
+                },
+                proposed: {
+                    rent: 80,
+                    packageBW: 600,
+                    packageColor: 300,
+                    packageFixedCost: 40,
+                    costPerExtraBW: 0.008,
+                    costPerExtraColor: 0.045
+                },
+                bwCopies: 1000,
+                colorCopies: 500
+            });
+            render();
+        }
+
+        function deleteCopier(id) {
+            if (copiers.length > 1) {
+                copiers = copiers.filter(c => c.id !== id);
+                render();
+            }
+        }
+
+        function updateCopier(id, field, value) {
+            const copier = copiers.find(c => c.id === id);
+            if (!copier) return;
+
+            const numValue = parseFloat(value) || 0;
+
+            if (['bwCopies', 'colorCopies'].includes(field)) {
+                copier[field] = numValue;
+            } else if (field.startsWith('current-')) {
+                copier.current[field.substring(8)] = numValue;
+            } else if (field.startsWith('proposed-')) {
+                copier.proposed[field.substring(9)] = numValue;
+            } else if (field === 'name') {
+                copier.name = value;
+            }
+
+            render();
+        }
+
+        function renderCopierCard(copier) {
+            const comparison = compareResults(copier);
+            const isSaving = comparison.monthlySavings > 0;
+            const borderColor = isSaving ? '#22c55e' : '#ef4444';
+
+            return `
+                <div class="copier-card ${isSaving ? 'saving' : ''}">
+                    <div class="copier-header">
+                        <input type="text" class="copier-name-input" value="${copier.name}"
+                            onchange="updateCopier('${copier.id}', 'name', this.value)"
+                            placeholder="Nom du copieur">
+                        <button class="btn btn-danger" onclick="deleteCopier('${copier.id}')">✕</button>
+                    </div>
+
+                    <div class="usage-section">
+                        <div class="form-group">
+                            <label>Copies N&B/mois</label>
+                            <input type="number" min="0" value="${copier.bwCopies}"
+                                onchange="updateCopier('${copier.id}', 'bwCopies', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Copies Couleur/mois</label>
+                            <input type="number" min="0" value="${copier.colorCopies}"
+                                onchange="updateCopier('${copier.id}', 'colorCopies', this.value)">
+                        </div>
+                        <div class="comparison-box">
+                            <div class="comparison-box-title">Résultats</div>
+                            <div class="comparison-line">
+                                <span>Mensuel actuel:</span>
+                                <span style="color: #dc2626; font-weight: 600;">${formatCurrency(comparison.current.monthlyTotal)}</span>
+                            </div>
+                            <div class="comparison-line">
+                                <span>Mensuel proposé:</span>
+                                <span style="color: #16a34a; font-weight: 600;">${formatCurrency(comparison.proposed.monthlyTotal)}</span>
+                            </div>
+                            <div class="comparison-line total" style="background-color: ${isSaving ? '#f0fdf4' : '#fef2f2'};">
+                                <span>Économies:</span>
+                                <span style="color: ${isSaving ? '#16a34a' : '#dc2626'}; font-weight: 600;">${isSaving ? '+' : ''}${formatCurrency(comparison.monthlySavings)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comparison-section">
+                        <div class="section-label">
+                            <strong style="color: #991b1b;">Solution Actuelle</strong>
+                            <div class="form-row" style="margin-top: 0.5rem;">
+                                <div class="form-group">
+                                    <label>Loyer</label>
+                                    <input type="number" step="0.01" min="0" value="${copier.current.rent}"
+                                        onchange="updateCopier('${copier.id}', 'current-rent', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Copies N&B</label>
+                                    <input type="number" min="0" value="${copier.current.packageBW}"
+                                        onchange="updateCopier('${copier.id}', 'current-packageBW', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Copies Couleur</label>
+                                    <input type="number" min="0" value="${copier.current.packageColor}"
+                                        onchange="updateCopier('${copier.id}', 'current-packageColor', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Forfait fixe</label>
+                                    <input type="number" step="0.01" min="0" value="${copier.current.packageFixedCost}"
+                                        onchange="updateCopier('${copier.id}', 'current-packageFixedCost', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>€/page N&B</label>
+                                    <input type="number" step="0.001" min="0" value="${copier.current.costPerExtraBW}"
+                                        onchange="updateCopier('${copier.id}', 'current-costPerExtraBW', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>€/page Couleur</label>
+                                    <input type="number" step="0.001" min="0" value="${copier.current.costPerExtraColor}"
+                                        onchange="updateCopier('${copier.id}', 'current-costPerExtraColor', this.value)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-label green">
+                            <strong style="color: #15803d;">Solution Proposée</strong>
+                            <div class="form-row" style="margin-top: 0.5rem;">
+                                <div class="form-group">
+                                    <label>Loyer</label>
+                                    <input type="number" step="0.01" min="0" value="${copier.proposed.rent}"
+                                        onchange="updateCopier('${copier.id}', 'proposed-rent', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Copies N&B</label>
+                                    <input type="number" min="0" value="${copier.proposed.packageBW}"
+                                        onchange="updateCopier('${copier.id}', 'proposed-packageBW', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Copies Couleur</label>
+                                    <input type="number" min="0" value="${copier.proposed.packageColor}"
+                                        onchange="updateCopier('${copier.id}', 'proposed-packageColor', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Forfait fixe</label>
+                                    <input type="number" step="0.01" min="0" value="${copier.proposed.packageFixedCost}"
+                                        onchange="updateCopier('${copier.id}', 'proposed-packageFixedCost', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>€/page N&B</label>
+                                    <input type="number" step="0.001" min="0" value="${copier.proposed.costPerExtraBW}"
+                                        onchange="updateCopier('${copier.id}', 'proposed-costPerExtraBW', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>€/page Couleur</label>
+                                    <input type="number" step="0.001" min="0" value="${copier.proposed.costPerExtraColor}"
+                                        onchange="updateCopier('${copier.id}', 'proposed-costPerExtraColor', this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function render() {
+            const copiersList = document.getElementById('copiersList');
+            copiersList.innerHTML = copiers.map(c => renderCopierCard(c)).join('');
+
+            const comparisons = copiers.map(c => ({ ...c, ...compareResults(c) }));
+            const totalCurrentMonthly = comparisons.reduce((sum, c) => sum + c.current.monthlyTotal, 0);
+            const totalProposedMonthly = comparisons.reduce((sum, c) => sum + c.proposed.monthlyTotal, 0);
+            const monthlySavings = totalCurrentMonthly - totalProposedMonthly;
+            const annualSavings = monthlySavings * 12;
+
+            document.getElementById('totalCurrentMonthly').textContent = formatCurrency(totalCurrentMonthly);
+            document.getElementById('totalProposedMonthly').textContent = formatCurrency(totalProposedMonthly);
+            document.getElementById('monthlySavings').textContent = formatCurrency(monthlySavings);
+            document.getElementById('annualSavings').textContent = formatCurrency(annualSavings);
+            document.getElementById('savingsPercent').textContent = totalCurrentMonthly > 0
+                ? `${((monthlySavings / totalCurrentMonthly) * 100).toFixed(1)}% de réduction`
+                : '0% de réduction';
+            document.getElementById('copierCount').textContent = `(${comparisons.length} copieur${comparisons.length > 1 ? 's' : ''})`;
+
+            const detailTableBody = document.getElementById('detailTableBody');
+            detailTableBody.innerHTML = comparisons.map(c => `
+                <tr>
+                    <td>${c.name}</td>
+                    <td class="red">${formatCurrency(c.current.monthlyTotal)}</td>
+                    <td class="green">${formatCurrency(c.proposed.monthlyTotal)}</td>
+                    <td class="green"><strong>${formatCurrency(c.monthlySavings)}</strong></td>
+                    <td>${c.savingsPercentage.toFixed(1)}%</td>
+                </tr>
+            `).join('') + `
+                <tr class="total">
+                    <td>TOTAL</td>
+                    <td class="red">${formatCurrency(totalCurrentMonthly)}</td>
+                    <td class="green">${formatCurrency(totalProposedMonthly)}</td>
+                    <td class="green">${formatCurrency(monthlySavings)}</td>
+                    <td>${totalCurrentMonthly > 0 ? ((monthlySavings / totalCurrentMonthly) * 100).toFixed(1) : 0}%</td>
+                </tr>
+            `;
+
+            document.getElementById('detailTableContainer').style.display = comparisons.length > 0 ? 'block' : 'none';
+            document.getElementById('summary').style.display = comparisons.length > 0 ? 'block' : 'none';
+        }
+
+        function exportPDF() {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            let yPosition = margin;
+
+            const comparisons = copiers.map(c => ({ ...c, ...compareResults(c) }));
+            const totalCurrentMonthly = comparisons.reduce((sum, c) => sum + c.current.monthlyTotal, 0);
+            const totalProposedMonthly = comparisons.reduce((sum, c) => sum + c.proposed.monthlyTotal, 0);
+            const monthlySavings = totalCurrentMonthly - totalProposedMonthly;
+            const annualSavings = monthlySavings * 12;
+
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.text('Analyse ROI - Comparaison Copieurs', margin, yPosition);
+            yPosition += 12;
+
+            const today = new Date().toLocaleDateString('fr-FR');
+            doc.setFont('Helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Date: ${today}`, margin, yPosition);
+            yPosition += 8;
+
+            doc.setDrawColor(52, 73, 94);
+            doc.line(margin, yPosition, pageWidth - margin, yPosition);
+            yPosition += 10;
+
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(34, 139, 34);
+            doc.text('Résumé des Économies Totales', margin, yPosition);
+            yPosition += 8;
+
+            doc.setFont('Helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Économies mensuelles: ${formatCurrency(monthlySavings)}`, margin, yPosition);
+            yPosition += 6;
+            doc.text(`Économies annuelles: ${formatCurrency(annualSavings)}`, margin, yPosition);
+            yPosition += 12;
+
+            doc.setDrawColor(52, 73, 94);
+            doc.line(margin, yPosition, pageWidth - margin, yPosition);
+            yPosition += 10;
+
+            comparisons.forEach((comparison, index) => {
+                if (yPosition > pageHeight - 40) {
+                    doc.addPage();
+                    yPosition = margin;
+                }
+
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.text(`${index + 1}. ${comparison.name}`, margin, yPosition);
+                yPosition += 7;
+
+                doc.setFont('Helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.text(`Utilisation: ${comparison.bwCopies} N&B, ${comparison.colorCopies} Couleur/mois`, margin, yPosition);
+                yPosition += 6;
+
+                const rectY = yPosition;
+                doc.setFillColor(245, 245, 245);
+                doc.rect(margin, rectY, pageWidth - 2 * margin, 45, 'F');
+
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.text('Solution Actuelle', margin + 3, yPosition + 4);
+                doc.text('Solution Proposée', (pageWidth - margin) / 2 + 3, yPosition + 4);
+
+                yPosition += 6;
+
+                doc.setFont('Helvetica', 'normal');
+                doc.setFontSize(8);
+                const currentData = [
+                    `Loyer: ${formatCurrency(comparison.current.rentCost)}`,
+                    `Forfait: ${formatCurrency(comparison.current.basePackageCost)}`,
+                    `Supp. N&B: ${formatCurrency(comparison.current.extraBWCost)}`,
+                    `Supp. Couleur: ${formatCurrency(comparison.current.extraColorCost)}`,
+                ];
+
+                const proposedData = [
+                    `Loyer: ${formatCurrency(comparison.proposed.rentCost)}`,
+                    `Forfait: ${formatCurrency(comparison.proposed.basePackageCost)}`,
+                    `Supp. N&B: ${formatCurrency(comparison.proposed.extraBWCost)}`,
+                    `Supp. Couleur: ${formatCurrency(comparison.proposed.extraColorCost)}`,
+                ];
+
+                currentData.forEach((line, i) => {
+                    doc.text(line, margin + 3, yPosition + i * 4.5);
+                    doc.text(proposedData[i], (pageWidth - margin) / 2 + 3, yPosition + i * 4.5);
+                });
+
+                yPosition += 22;
+
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(220, 20, 60);
+                doc.text(`Mensuel: ${formatCurrency(comparison.current.monthlyTotal)}`, margin + 3, yPosition);
+                doc.setTextColor(34, 139, 34);
+                doc.text(`Mensuel: ${formatCurrency(comparison.proposed.monthlyTotal)}`, (pageWidth - margin) / 2 + 3, yPosition);
+
+                yPosition += 10;
+                doc.setDrawColor(200, 200, 200);
+                doc.line(margin, yPosition, pageWidth - margin, yPosition);
+                yPosition += 7;
+
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(34, 139, 34);
+                doc.text(`Économies: ${formatCurrency(comparison.monthlySavings)}/mois (${comparison.savingsPercentage.toFixed(1)}%)`, margin, yPosition);
+                yPosition += 6;
+                doc.text(`Annuelles: ${formatCurrency(comparison.annualSavings)}`, margin, yPosition);
+                yPosition += 10;
+
+                doc.setTextColor(0, 0, 0);
+            });
+
+            doc.save('analyse-roi-copieurs.pdf');
+        }
+
+        render();
+    </script>
+</body>
 </html>
